@@ -52,14 +52,21 @@ namespace Snake {
 
         public Size FieldSizePixel { get; private set; }
 
-        public event EventHandler<CollisionEventArgs> OnCollide;
+        private event EventHandler<CollisionEventArgs> OnCollide;
         private event EventHandler<FruitEatEventArgs> OnFruitEat;
+        public event EventHandler<PaintEventArgs> OnDesirePaint;
 
         private Graphics _graphics;
         public Graphics Graphics {
             get => _graphics;
             private set => _graphics = value;
         }
+
+        /*private Rectangle _drawRect;
+        public Rectangle DrawingRectangle {
+            get => _drawRect;
+            private set => _drawRect = value;
+        }*/
 
         public bool Running { get; private set; }
 
@@ -75,8 +82,14 @@ namespace Snake {
             private set => _appendixLength = value;
         }
 
-        public SnakeLogic(Size siz) {
-            FieldSizePixel = siz;
+        private SnakePanel _panel;
+        public SnakePanel SnakePanel {
+            get => _panel;
+            private set => _panel = value;
+        }
+
+        public SnakeLogic(Size size) {
+            FieldSizePixel = size;
             _rand = new Random();
             Running = false;
             _timer = new Timer {
@@ -85,20 +98,25 @@ namespace Snake {
             };
 
             for (int x = 0; x < _grid.GetLength(0); x++) {
-                for (int y = 0; y < _grid.GetLength(1);) {
+                for (int y = 0; y < _grid.GetLength(1); y++) {
                     _grid[x, y] = ' ';
-                    if (x == 13) {
-                        x = 0;
-                        y++;
-                    }
                 }
             }
 
-            using (Pen p = new Pen(Color.Black)) {
+            using (var imgBuf = new Bitmap(size.Width, size.Height)) {
+                using (var graphics = Graphics.FromImage(imgBuf)) {
+                    _graphics = graphics;
+                }
+             }
+
+            /*using (Pen p = new Pen(Color.Black)) {
                 _graphics.DrawRectangle(p, 0, 0, FieldSizePixel.Width, FieldSizePixel.Height);
-            }
+            }*/
             
+            // Random Startpunkt
             Position = new Point(_rand.Next(3, 7), _rand.Next(3, 7));
+
+            // Random Richtung
             Direction = (Direction)Enum.GetValues(typeof(Direction)).GetValue(_rand.Next(3));
 
             this.OnCollide += (s, e) => {
@@ -106,7 +124,7 @@ namespace Snake {
             };
 
             this.OnFruitEat += (s, e) => {
-                
+
             };
 
         }
@@ -120,6 +138,13 @@ namespace Snake {
 
         protected virtual void OnFruitEaten(FruitEatEventArgs e) {
             EventHandler<FruitEatEventArgs> handler = OnFruitEat;
+            if (handler != null) {
+                handler(this, e);
+            }
+        }
+
+        protected virtual void OnMustPaint(PaintEventArgs e) {
+            EventHandler<PaintEventArgs> handler = OnDesirePaint;
             if (handler != null) {
                 handler(this, e);
             }
@@ -143,7 +168,7 @@ namespace Snake {
         }
 
         private void timer_Tick(object sender, EventArgs e) {
-
+            OnMustPaint(new PaintEventArgs(_graphics, Rectangle.Empty));
         }
 
         public void Left() {
@@ -191,8 +216,11 @@ namespace Snake {
         }
 
         private void Died() {
+            /*Running = false;
+            _timer.Enabled = false;
             _pos = new Point(_rand.Next(3, 7), _rand.Next(3, 7));
-            Direction = (Direction)Enum.GetValues(typeof(Direction)).GetValue(_rand.Next(3));
+            Direction = (Direction)Enum.GetValues(typeof(Direction)).GetValue(_rand.Next(3));*/
+            Respawn();
         }
     }
 }
